@@ -1,6 +1,6 @@
-**QTL project**
+# QTL project
 
-*1. Genetic data
+## 1. Genetic data
 
 We first process genetics data, due to
 1) imputation (See imputation.md)
@@ -44,7 +44,7 @@ gemma --bfile plink.408sample.pruned -gk 1 -o IBS.matrix
 
 ```
 
-*2. Data prepare and harmonize
+## 2. Data prepare and harmonize
 
 Before analysis, we need to harmonize genotype data, phenotype (covariates) data and expression (e.g., gene/isoform/AS) data.
 
@@ -264,7 +264,7 @@ writeLines(c(missing_in_fam, missing_in_exp), "mismatched_samples.txt")
 
 Okay, now we have **expression_reordered.txt**
 
-*3. gene-snp pairs data
+## 3. gene-snp pairs data
 
 For each gene, we have to know what SNPs we should use in QTL analysis
 
@@ -315,7 +315,7 @@ ENSG00000228463.10 rs142559957
 ENSG00000228463.10 rs74879860
 ```
 
-*4. Finally, lets set up QTL analysis using GEMMA
+## 4. Finally, lets set up QTL analysis using GEMMA
 
 ```
 #!/bin/bash
