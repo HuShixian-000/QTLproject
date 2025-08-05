@@ -107,7 +107,7 @@ write.table(tmp.matrix,file = "QTL_files/ASCEND/RNA_gene.ASCEND.txt",row.names =
 write.table(tmp.pheno,file = "QTL_files/ASCEND/Covariates.gene.ASCEND.txt",row.names = T,quote = F,sep = "\t")
 ```
 Okay, now we have log transformed **gene matrix** and **covairates** (age, sex, BMI, inflammation and location)
-Lets harmonize genetic data with gene matrix.*Note*, we have to generate coupling file contains IDs of gene matrix and geneitc individuals
+（2）Lets harmonize genetic data with gene matrix.*Note*, we have to generate coupling file contains IDs of gene matrix and geneitc individuals
 
 ```
 # change IDs
@@ -147,9 +147,16 @@ write.table(coupling_ASCEND,file="QTL_files/ASCEND/QTL.linkID.file.txt",quote = 
 
 ```
 
+```
+new_ASA_ID	RNA_ID	Patient_ID	ASA_ID	Plink_ID
+FKDN240483734-1A	R24118680	CD0809	FKDN240483734-1A	77_FKDN240483734-1A
+FKDN240483734-1A_1	R24118681	CD0809	FKDN240483734-1A	77_FKDN240483734-1A_1
+FKDN240483735-1A	R24115452	CD0611	FKDN240483735-1A	78_FKDN240483735-1A<img width="565" height="65" alt="image" src="https://github.com/user-attachments/assets/b9281ad6-bbc6-4829-ad6c-574eb5f5f725" />
+```
+
 Okay, now we have **QTL.linkID.file.txt** file, which is used for link PLINK fam file and gene matrix. Then lets take residuals from linear regression
 
-Here, we regress out age, sex, BMI, inflammation and location, and 10 factors to identify broader eQTLs
+(3) Here, we regress out age, sex, BMI, inflammation and location, and 10 factors to identify broader eQTLs
 
 ```
 gene_ASCEND=read.table("QTL_files/ASCEND/RNA_gene.ASCEND.txt",row.names = 1,header = T,stringsAsFactors = F,check.names = F)
@@ -179,7 +186,7 @@ write.table(tmp.residuals,file = "QTL_files/ASCEND/residuals.ASCEND.gene.txt",ro
 
 Okay, now upload **QTL.linkID.file.txt**, **residuals.ASCEND.gene.txt** to cluster
 
-On cluster, lets harmonize genetics and gene matrix
+(4) On cluster, lets harmonize genetics and gene matrix
 
 ```
 Must re-order the tissue order matching to plink.fam file, otherwise all the analysis would be wrong!!!!
