@@ -284,6 +284,12 @@ writeLines(c(missing_in_fam, missing_in_exp), "mismatched_samples.txt")
 ```
 
 Okay, now we have **expression_reordered.txt**
+It should be like:
+```
+Gene    1_FKDN240484037-1A      1_FKDN240484037-1A_1
+ENSG00000000003.16      0.0952116900012548      0.153791426289886
+ENSG00000000005.6       -0.0708643004623226     0.670274722566677
+```
 
 ## 3. gene-snp pairs data
 
