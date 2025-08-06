@@ -188,6 +188,20 @@ Okay, now upload **QTL.linkID.file.txt**, **residuals.ASCEND.gene.txt** to clust
 
 (4) On cluster, lets harmonize genetics and gene matrix
 
+residuals.ASCEND.gene.txt should be like:
+```
+ENSG00000000003.16      ENSG00000000005.6
+R24118608       -0.18438795110267       0.330104350271361
+R24118607       -0.243135003150785      -1.18534908752482
+```
+QTL.linkID.file.txt should be like:
+```
+new_ASA_ID      RNA_ID  Patient_ID      ASA_ID  Plink_ID
+FKDN240483734-1A        R24118680       CD0809  FKDN240483734-1A        77_FKDN240483734-1A
+FKDN240483734-1A_1      R24118681       CD0809  FKDN240483734-1A        77_FKDN240483734-1A_1
+FKDN240483735-1A        R24115452       CD0611  FKDN240483735-1A        78_FKDN240483735-1A
+```
+
 ```
 Must re-order the tissue order matching to plink.fam file, otherwise all the analysis would be wrong!!!!
 
