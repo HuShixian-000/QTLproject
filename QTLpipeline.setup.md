@@ -502,9 +502,12 @@ ENSG00000256128.8       0       Skipped (no SNPs)
 Below is the merge.bash script, however, we should take care if the pipeline runs well for all gene/transcript/AS
 
 Lets check several things:
-(1) how many features in Feature.all.txt file, which means the features we use for QTL from expression.table
-(2) how many features have been successfully run out as eQTL.assoc.result? This number should not be less than (1)
-(3) how many assoc.result has empty output? and that means the analysis has been failed in GEMMA default parameters (maf 0.01 and missing rate 0.8)
+
+**(1)** how many features in Feature.all.txt file, which means the features we use for QTL from expression.table
+
+**(2)** how many features have been successfully run out as eQTL.assoc.result? This number should not be less than (1)
+
+**(3)** how many assoc.result has empty output? and that means the analysis has been failed in GEMMA default parameters (maf 0.01 and missing rate 0.8)
 
 REMENBER, always check the gene ID version between all files, for example, the ENSG00000001626 in gencode.v38.annotation.gtf is ENSG00000001626.16, but in RNAseq pipeline is ENSG00000001626.18, always be careful about version change!!!
 
