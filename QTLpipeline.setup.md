@@ -497,6 +497,73 @@ ENSG00000280893.1       989     Processing
 ENSG00000256128.8       0       Skipped (no SNPs)
 ```
 
+## 5. Merge and check results
+
+Below is the merge.bash script, however, we should take care if the pipeline runs well for all gene/transcript/AS
+
+Lets check several things:
+(1) how many features in Feature.all.txt file, which means the features we use for QTL from expression.table
+(2) how many features have been successfully run out as eQTL.assoc.result? This number should not be less than (1)
+(3) how many assoc.result has empty output? and that means the analysis has been failed in GEMMA default parameters (maf 0.01 and missing rate 0.8)
+
+REMENBER, always check the gene ID version between all files, for example, the ENSG00000001626 in gencode.v38.annotation.gtf is ENSG00000001626.16, but in RNAseq pipeline is ENSG00000001626.18, always be careful about version change!!!
+
+```
+#!/bin/bash
+
+# Set result path - NOTE: variable names can't contain dots
+result_path="/groups/g5840105/home/share/QTLproject/pipeline_QTL/Result_eQTL"
+
+# Verify the path exists
+if [ ! -d "$result_path" ]; then
+    echo "Error: Directory not found - $result_path"
+    exit 1
+fi
+
+# Output file
+output="merged_eQTL_results.txt"
+
+# Get header from first file (handle case where no files exist)
+first_file=$(ls ${result_path}/eQTL_*.result.assoc.txt 2>/dev/null | head -n 1)
+if [ -z "$first_file" ]; then
+    echo "Error: No matching files found in $result_path"
+    exit 1
+fi
+
+echo -e "$(head -n 1 "$first_file")\tfeature" > "$output"
+
+# Counters
+empty_files=0
+total_files=0
+
+# Process files
+for file in ${result_path}/eQTL_*.result.assoc.txt; do
+    ((total_files++))
+
+    # Check if file is empty or has only header
+    if [[ $(wc -l < "$file") -le 1 ]]; then
+        echo "[WARNING] Empty or header-only file: $(basename "$file")"
+        ((empty_files++))
+        continue
+    fi
+
+    # Extract gene name
+    gene=$(basename "$file" | sed 's/^eQTL_//; s/\.result\.assoc\.txt$//')
+
+    # Append data
+    awk -v gene="$gene" 'NR > 1 { print $0 "\t" gene }' "$file" >> "$output"
+done
+
+# Summary report
+{
+    echo "----------------------------------------"
+    echo "[$(date)] Merged results saved to: $output"
+    echo "Total files found: $total_files"
+    echo "Skipped empty/header-only files: $empty_files"
+    echo "Successfully processed files: $((total_files - empty_files))"
+} >> $output.log
+~                   
+```
 
 
 
