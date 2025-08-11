@@ -505,7 +505,7 @@ Lets check several things:
 
 **(1)** how many features in Feature.all.txt file, which means the features we use for QTL from expression.table
 
-**(2)** how many features have been successfully run out as eQTL.assoc.result? This number should not be less than (1)
+**(2)** how many features have been successfully run out as eQTL.assoc.result? This number should not be less than (1);some genes might not have SNPs, based on window size (1mb/500kb), for example, the gene DDX11L1, it is the start position of Chr1, if we use 500kb, the we lose all SNPs of this gene while 1mb remains this signal 
 
 **(3)** how many assoc.result has empty output? and that means the analysis has been failed in GEMMA default parameters (maf 0.01 and missing rate 0.8)
 
