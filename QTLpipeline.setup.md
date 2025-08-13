@@ -568,7 +568,180 @@ done
 ~                   
 ```
 
+## 6. Meta analysis across populations
 
+To perform meta analysis, we need the output files originated from GEMMA without any modification.
+
+(1) check how many SNP-feature pairs for each QTL summary (e.g. > 20,000,000 in general)
+
+(2) check how many pairs can be matched for two or more QTL summaries
+
+(3) check whether the allele directions are the same between two or more QTL summaries
+
+(4) random effect model with DL estimation
+
+(5) heterogeneity test
+
+(6) FDR correction, only for those pass Q test
+
+```
+
+import pandas as pd
+import numpy as np
+from scipy.stats import chi2, norm
+
+def align_alleles_vectorized(df):
+    print("Starting allele alignment...")
+    match = (df['allele1_1'] == df['allele1_2']) & (df['allele0_1'] == df['allele0_2'])
+    flip = (df['allele1_1'] == df['allele0_2']) & (df['allele0_1'] == df['allele1_2'])
+
+    beta_aligned = np.full(len(df), np.nan, dtype=float)
+    allele1_aligned = np.full(len(df), None, dtype=object)
+    allele0_aligned = np.full(len(df), None, dtype=object)
+
+    beta_aligned[match] = df.loc[match, 'beta_2']
+    allele1_aligned[match] = df.loc[match, 'allele1_2']
+    allele0_aligned[match] = df.loc[match, 'allele0_2']
+
+    beta_aligned[flip] = -df.loc[flip, 'beta_2']
+    allele1_aligned[flip] = df.loc[flip, 'allele1_1']
+    allele0_aligned[flip] = df.loc[flip, 'allele0_1']
+
+    df = df.copy()
+    df['beta_2_aligned'] = beta_aligned
+    df['allele1_aligned'] = allele1_aligned
+    df['allele0_aligned'] = allele0_aligned
+
+    print(f"Allele alignment done: {np.sum(~np.isnan(beta_aligned))} aligned rows")
+    return df
+
+def random_effects_meta_vectorized(beta1, se1, beta2, se2):
+    print("Starting meta-analysis calculations...")
+    w1 = 1 / (se1**2)
+    w2 = 1 / (se2**2)
+
+    beta_FE = (beta1 * w1 + beta2 * w2) / (w1 + w2)
+    Q = w1 * (beta1 - beta_FE)**2 + w2 * (beta2 - beta_FE)**2
+
+    df = 1
+    c = w1 + w2 - (w1**2 + w2**2) / (w1 + w2)
+    tau2 = np.maximum(0, (Q - df) / c)
+
+    w1_star = 1 / (se1**2 + tau2)
+    w2_star = 1 / (se2**2 + tau2)
+
+    meta_beta = (beta1 * w1_star + beta2 * w2_star) / (w1_star + w2_star)
+    meta_se = np.sqrt(1 / (w1_star + w2_star))
+    z = meta_beta / meta_se
+    meta_pvalue = 2 * norm.sf(np.abs(z))
+
+    I2 = np.zeros_like(Q)
+    valid = Q > df
+    I2[valid] = np.maximum(0, (Q[valid] - df) / Q[valid])
+
+    p_Qtest = 1 - chi2.cdf(Q, df)
+
+    print("Meta-analysis calculations done.")
+    return meta_beta, meta_se, meta_pvalue, Q, I2, p_Qtest
+
+def benjamini_hochberg(pvalues):
+    print("Starting BH FDR correction...")
+    p = np.array(pvalues)
+    n = len(p)
+    order = np.argsort(p)
+    ranks = np.empty(n, int)
+    ranks[order] = np.arange(1, n+1)
+    fdr = np.minimum.accumulate((n / ranks * p)[order[::-1]])[::-1]
+    fdr = np.minimum(fdr, 1)
+    fdr_adjusted = np.empty(n)
+    fdr_adjusted[order] = fdr
+    print("BH FDR correction done.")
+    return fdr_adjusted
+
+def main(file1, file2, output_file):
+    print(f"Reading input files '{file1}' and '{file2}'...")
+    df1 = pd.read_csv(file1, sep='\t')
+    df2 = pd.read_csv(file2, sep='\t')
+    print(f"Files read: {len(df1)} rows in file1, {len(df2)} rows in file2.")
+
+    df1 = df1.rename(columns={
+        'beta': 'beta_1', 'se': 'se_1', 'p_wald': 'pvalue_1',
+        'allele1': 'allele1_1', 'allele0': 'allele0_1',
+        'rs': 'SNP', 'ps': 'pos', 'feature': 'feature'
+    })
+    df2 = df2.rename(columns={
+        'beta': 'beta_2', 'se': 'se_2', 'p_wald': 'pvalue_2',
+        'allele1': 'allele1_2', 'allele0': 'allele0_2',
+        'rs': 'SNP', 'ps': 'pos', 'feature': 'feature'
+    })
+
+    print("Merging datasets on ['SNP', 'feature']...")
+    df_meta = pd.merge(df1, df2, on=['SNP', 'feature'], suffixes=('_1', '_2'))
+    total_pairs = len(df_meta)
+    if 'pos_1' in df_meta.columns:
+        df_meta.rename(columns={'pos_1': 'pos'}, inplace=True)
+    print(f"Merged dataset contains {total_pairs} SNP-feature pairs.")
+
+    df_meta = align_alleles_vectorized(df_meta)
+    df_meta = df_meta.dropna(subset=['beta_2_aligned'])
+    aligned_pairs = len(df_meta)
+    print(f"{aligned_pairs} pairs remain after allele alignment.")
+
+    # Prepare arrays
+    beta1 = df_meta['beta_1'].values.astype(float)
+    se1 = df_meta['se_1'].values.astype(float)
+    beta2 = df_meta['beta_2_aligned'].values.astype(float)
+    se2 = df_meta['se_2'].values.astype(float)
+
+    meta_results = random_effects_meta_vectorized(beta1, se1, beta2, se2)
+    meta_cols = ['meta_beta', 'meta_se', 'meta_pvalue', 'Q', 'I2', 'p_Qtest']
+    for col, arr in zip(meta_cols, meta_results):
+        df_meta[col] = arr
+
+    mask = df_meta['p_Qtest'] > 0.05
+    print(f"Applying BH correction on {mask.sum()} pairs with non-significant heterogeneity...")
+    fdr = np.full(len(df_meta), np.nan)
+    fdr[mask] = benjamini_hochberg(df_meta.loc[mask, 'meta_pvalue'])
+    df_meta['meta_FDR'] = fdr
+
+    print("Sorting results by meta_FDR...")
+    df_meta = df_meta.sort_values(by='meta_FDR', na_position='last')
+
+    out_cols = [
+        'feature', 'SNP', 'pos',
+        'allele1_1', 'allele0_1',
+        'meta_beta', 'meta_se', 'meta_pvalue', 'meta_FDR',
+        'beta_1', 'se_1', 'pvalue_1',
+        'beta_2_aligned', 'se_2', 'pvalue_2',
+        'Q', 'I2', 'p_Qtest'
+    ]
+    print(f"Writing output to '{output_file}'...")
+    df_meta[out_cols].to_csv(output_file, sep='\t', index=False)
+
+    log_file = output_file.rsplit('.', 1)[0] + '.log'
+    with open(log_file, 'w') as log:
+        log.write(f"Total SNP-feature pairs before allele alignment: {total_pairs}\n")
+        log.write(f"Pairs after allele alignment: {aligned_pairs}\n")
+        log.write(f"Pairs removed due to allele alignment failure: {total_pairs - aligned_pairs}\n")
+        log.write(f"Pairs with non-significant heterogeneity (Q-test p > 0.05): {mask.sum()}\n")
+        sig = (df_meta['meta_FDR'] < 0.05).sum()
+        log.write(f"Significant pairs at FDR < 0.05: {sig}\n")
+        if sig > 0:
+            log.write("Top significant pair:\n")
+            top = df_meta.loc[df_meta['meta_FDR'].idxmin()]
+            for c in out_cols:
+                log.write(f"{c}: {top[c]}\n")
+
+    print("Analysis complete.")
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 4:
+        print("Usage: python Meta.analysis.py file1.txt file2.txt output.txt")
+        sys.exit(1)
+    main(sys.argv[1], sys.argv[2], sys.argv[3])
+~                                                               
+```
 
 
 
