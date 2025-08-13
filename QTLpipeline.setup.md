@@ -700,7 +700,7 @@ def main(file1, file2, output_file):
 
     mask = df_meta['p_Qtest'] > 0.05
     print(f"Applying BH correction on {mask.sum()} pairs with non-significant heterogeneity...")
-    fdr = np.full(len(df_meta), np.nan)
+    fdr = np.full(len(df_meta), 0.99)
     fdr[mask] = benjamini_hochberg(df_meta.loc[mask, 'meta_pvalue'])
     df_meta['meta_FDR'] = fdr
 
